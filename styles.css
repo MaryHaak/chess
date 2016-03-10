@@ -1,0 +1,111 @@
+html, body, div{
+	margin: 0;
+	padding: 0;
+	font-family: 'Source Sans Pro', sans-serif;
+}
+
+#board{
+	width: 600px;
+	height: 600px;
+	display:inline-block;
+	vertical-align: top;
+}
+
+.index{
+	position: absolute;
+	margin: 2;
+	font-size: 80%;
+}
+
+.cell{
+	display:inline-block;
+	height:75px;
+	width:75px;
+	position:relative;
+}
+
+.blackcell{
+	background-color:#6D4C41;
+}
+
+.whitecell{
+	background-color:#A1887F;
+}
+
+.possiblecell{
+	border: 3px solid #1B5E20;
+	box-sizing: border-box;
+}
+
+.figure{
+	height: 75px;
+	width: 75px;
+}
+
+.blackfigure.rook{
+	background-image: url("images/blackrook.png");
+}
+
+.blackfigure.pawn{
+	background-image: url("images/blackpawn.png");
+}
+
+.blackfigure.horse{
+	background-image: url("images/blackhorse.png");
+}
+
+.blackfigure.eleph{
+	background-image: url("images/blackeleph.png");
+}
+
+.blackfigure.queen{
+	background-image: url("images/blackqueen.png");
+}
+
+.blackfigure.king{
+	background-image: url("images/blackking.png");
+}
+
+.whitefigure.rook{
+	background-image: url("images/whiterook.png");
+}
+
+.whitefigure.pawn{
+	background-image: url("images/whitepawn.png");
+}
+
+.whitefigure.horse{
+	background-image: url("images/whitehorse.png");
+}
+
+.whitefigure.eleph{
+	background-image: url("images/whiteeleph.png");
+}
+
+.whitefigure.queen{
+	background-image: url("images/whitequeen.png");
+}
+
+.whitefigure.king{
+	background-image: url("images/whiteking.png");
+}
+
+#turnmessage{
+	display:inline-block;
+	width:100px;
+	vertical-align: top;
+	color: red;
+	margin: 30px;
+	font-size: 150%;
+}
+
+#logbox{
+	width: 300px;
+	height: 600px;
+	display: inline-block;;
+}
+
+#logbox p{
+	padding: 0;
+	margin: 0;
+}
