@@ -58,25 +58,24 @@ $(document).ready(function(){
     {
       if(curPlayer==0)
       {
-        $(document.getElementById("cell"+(+curNumber+1)+(+curLetter+1))).addClass("possiblecell");
-        $(document.getElementById("cell"+(+curNumber+1)+(+curLetter-1))).addClass("possiblecell");
-      }
-      else {
-        $(document.getElementById("cell"+(+curNumber-1)+(+curLetter+1))).addClass("possiblecell");
-        $(document.getElementById("cell"+(+curNumber-1)+(+curLetter-1))).addClass("possiblecell");
-      }
-    }
-    else if(curFigure === "pawn")
-    {
-      //подсвечивание возможных ходов
-      if(curPlayer==0)
-      {
         $(document.getElementById("cell"+(+curNumber+1)+curLetter)).addClass("possiblecell");
         $(document.getElementById("cell"+(+curNumber+2)+curLetter)).addClass("possiblecell");
       }
       else {
         $(document.getElementById("cell"+(+curNumber-1)+curLetter)).addClass("possiblecell");
         $(document.getElementById("cell"+(+curNumber-2)+curLetter)).addClass("possiblecell");
+      }
+    }
+    if(curFigure === "pawn" && $("#"+curPos).hasClass("hasNotFirstStep"))
+    {
+      if(curPlayer==0)
+      {
+        $(document.getElementById("cell"+(+curNumber+1)+(+curLetter+1))).addClass("possiblecell");
+        $(document.getElementById("cell"+(+curNumber+1)+(+curLetter-1))).addClass("possiblecell");
+      }
+      else {
+        $(document.getElementById("cell"+(+curNumber-1)+(+curLetter+1))).addClass("possiblecell");
+        $(document.getElementById("cell"+(+curNumber-1)+(+curLetter-1))).addClass("possiblecell");
       }
     }
 
@@ -87,7 +86,8 @@ $(document).ready(function(){
     var curCell = $(event.target).attr("id").substr(4,2);
 
     //отмена подсвечивания возможных ходов
-    if(curPlayer==0)
+    //pawn - первый шаг
+    if(curPlayer==0 && $("#"+curPos).hasClass("hasFirstStep"))
     {
       $(document.getElementById("cell"+(+curNumber+1)+curLetter)).removeClass("possiblecell");
       $(document.getElementById("cell"+(+curNumber+2)+curLetter)).removeClass("possiblecell");
@@ -96,14 +96,33 @@ $(document).ready(function(){
       $(document.getElementById("cell"+(+curNumber-1)+curLetter)).removeClass("possiblecell");
       $(document.getElementById("cell"+(+curNumber-2)+curLetter)).removeClass("possiblecell");
     }
+    //pawn - последующие шаги
+    if(curPlayer==0 && $("#"+curPos).hasClass("hasNotFirstStep"))
+    {
+      $(document.getElementById("cell"+(+curNumber+1)+(+curLetter+1))).removeClass("possiblecell");
+      $(document.getElementById("cell"+(+curNumber+1)+(+curLetter-1))).removeClass("possiblecell");
+    }
+    else {
+      $(document.getElementById("cell"+(+curNumber-1)+(+curLetter+1))).removeClass("possiblecell");
+      $(document.getElementById("cell"+(+curNumber-1)+(+curLetter-1))).removeClass("possiblecell");
+    }
 
-    http://www.youtube.com/user/missglamorazzi
-    if( ( ( (+curNumber+1)+curLetter===curCell ||
-      (+curNumber+2)+curLetter===curCell ) &&
-      curPlayer==0 ) ||
-      ( ( (+curNumber-1)+curLetter===curCell ||
-        (+curNumber-2)+curLetter===curCell ) &&
-      curPlayer==1 ) )
+    if ( ( ( ( ( ( (+curNumber+1)+curLetter===curCell ||
+                (+curNumber+2)+curLetter===curCell ) &&
+                curPlayer==0 ) ||
+            ( ( (+curNumber-1)+curLetter===curCell ||
+                (+curNumber-2)+curLetter===curCell ) &&
+                curPlayer==1 ) ) &&
+                $("#"+curPos).hasClass("hasFirstStep") )
+                ||
+        ( ( ( ( (+curNumber+1).toString()+(+curLetter+1).toString()===curCell ||
+                (+curNumber+1).toString()+(+curLetter-1).toString()===curCell ) &&
+                curPlayer==0 ) ||
+            (  ( (+curNumber-1).toString()+(+curLetter+1).toString()===curCell ||
+                (+curNumber-1).toString()+(+curLetter-1).toString()===curCell ) &&
+                curPlayer==1 ) ) &&
+                $("#"+curPos).hasClass("hasNotFirstStep") )
+      ) && checkCellFreedom(curCell)===true )
     {
       $(".figure").draggable( "option", "revert", false );
 
@@ -114,7 +133,9 @@ $(document).ready(function(){
 
       //сохраняем текущее положение фигуры
       document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
-      $("#"+curCell).addClass("hasFirstStep");
+      $("#"+curCell).removeClass("hasFirstStep");
+      $("#"+curCell).addClass("hasNotFirstStep");
+
       curPlayer=1-curPlayer;
       if(curPlayer===0)
         document.getElementById('turnmessage').innerHTML="White";
@@ -125,4 +146,15 @@ $(document).ready(function(){
       $(".figure").draggable( "option", "revert", true );
     }
   }
+
+  function checkCellFreedom(curCell)
+  {
+    var checkRes = true;
+    for (var i=0; i<16; i++)
+    {
+      if($(black[i]).attr("id")===curCell || $(white[i]).attr("id")===curCell)
+        checkRes = false;
+    }
+    return checkRes;
+  }  
 });

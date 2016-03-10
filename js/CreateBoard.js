@@ -94,10 +94,10 @@ $(document).ready(function(){
 
   for (var i=0; i<8; i++)
   {
-    black[8+i].setAttribute('class','figure blackfigure pawn');
+    black[8+i].setAttribute('class','figure blackfigure pawn hasFirstStep');
     document.getElementById('cell'+'7'+(i+1)).appendChild(black[8+i]);
     black[8+i].setAttribute('id','7'+(i+1));
-    white[8+i].setAttribute('class','figure whitefigure pawn');
+    white[8+i].setAttribute('class','figure whitefigure pawn hasFirstStep');
     document.getElementById('cell'+'2'+(i+1)).appendChild(white[8+i]);
     white[8+i].setAttribute('id','2'+(i+1));
   }
