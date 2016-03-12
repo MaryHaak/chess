@@ -33,8 +33,15 @@ html, body, div{
 }
 
 .possiblecell{
-	border: 3px solid #1B5E20;
+	/*border: 2px solid #1B5E20;
 	box-sizing: border-box;
+	background-color: #1B5E20;*/
+	font-weight: bold;;
+	color: yellow;
+}
+
+.threatCell{
+	background-color: red;  
 }
 
 .figure{
@@ -108,4 +115,5 @@ html, body, div{
 #logbox p{
 	padding: 0;
 	margin: 0;
+	font-size: 80%;
 }

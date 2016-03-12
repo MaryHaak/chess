@@ -58,7 +58,7 @@ $(document).ready(function(){
   black[1].setAttribute('id','82');
   black[6].setAttribute('class','figure blackfigure horse');
   document.getElementById('cell87').appendChild(black[6]);
-  black[6].setAttribute('id','cell87');
+  black[6].setAttribute('id','87');
   white[1].setAttribute('class','figure whitefigure horse');
   document.getElementById('cell12').appendChild(white[1]);
   white[1].setAttribute('id','12');
