@@ -1,5 +1,22 @@
 $(document).ready(function(){
 
+//ШАХ & МАТ
+//шах-----+
+//удаление шагов, приводящих к шаху -----+
+//защита короля-----+
+//"поедание" фигуры противника, которой сделан шах---+
+//баг - появление undefined в checkConcreteCellShah при вызове из checkMat----+
+//рокировка-----+
+
+//превращение пешки - превращенная пешка не может делать рокировку
+//взятие на проходе
+//пат
+
+//баг для пешки(не перескакивать)
+//порядок в коде
+//крутое прекращение игры при мате и логи писать сверху
+//обновить github
+
   //информация о текущем ходе
   var curPlayer = 0; //0-white, 1-black
   var curColor = null;
@@ -11,6 +28,13 @@ $(document).ready(function(){
   var shah = false;
   var shahThreat = null;
   var killer = null;
+  var shahCheking=false;
+  var curPossibleCells = null;//ходы текущего игрока
+  var globalPossibleCells;//глобальная служебная переменная
+  var possibleCastlingRooks;
+  var wasWhiteCastling = false;
+  var wasBlackCastling = false;
+
   //создаем сообщение о текущем игроке
   var turnMessage = document.createElement('div');
   turnMessage.setAttribute('id','turnmessage');
@@ -36,6 +60,7 @@ $(document).ready(function(){
 
   function handleDragStart(event,ui)
   {
+    //debugger;
     if($(event.target).hasClass("whitefigure"))
       curColor = "white"
     else
@@ -46,89 +71,86 @@ $(document).ready(function(){
     curPos = curNumber+curLetter;
 
     //очередность ходов
-    if(!shah)
+    if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
     {
-      if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
-      {
-        $(".figure").draggable( "option", "revert", true );
-      }
-      else {
-        $(".figure").draggable( "option", "revert", false );
-        //определение потенциально возможных ходов
-        curPossibleCells = getPossibleCells(curPos,curNumber,curLetter,curFigure);
-        //закрашиваем ячейки
-        for (var i=0; i<curPossibleCells.length; i++)
-          $(document.getElementById("cell"+curPossibleCells[i])).addClass("possiblecell");
-      }
+      $(".figure").draggable( "option", "revert", true );
     }
-
-    if(shah)
-    {
-      if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
-      {
-        $(".figure").draggable( "option", "revert", true );
-      }
-      else {
-        $(".figure").draggable( "option", "revert", false );
-        //если случился шах, то имеются три варианта развития событий:
-        //1)если есть возможность взять фигуру, угрожающую королю, то запрещаются
-        //все другие действия кроме этого взятия
-        //2)если есть возможность прикрыть короля или уйти королем от атаки,
-        //то эти ходы предлагаются игроку
-        //3)если атаки не избежать, то это мат
-        var newLog = document.createElement('p');
-        newLog.innerHTML = "killer: " + killer + " " + $(event.target).attr("id");
-        document.getElementById('logbox').appendChild(newLog);
-        if ($(event.target).attr("id")!=killer)
+    else {
+      $(".figure").draggable( "option", "revert", false );
+      //определение потенциально возможных ходов
+      curPossibleCells = getPossibleCells(curPos,curNumber,curLetter,curFigure);
+      //убираем шаги, которые приведут к шаху
+      for (var i=0; i<curPossibleCells.length; i++)
+        if(checkConcreteCellShah(curPos, curPossibleCells[i]))
         {
-          $(".figure").draggable( "option", "revert", true );
-          var newLog = document.createElement('p');
-          newLog.innerHTML = "you should kill threat";
-          document.getElementById('logbox').appendChild(newLog);
+          curPossibleCells.splice(i,1);
+          i=i-1;
         }
-        else{
-          $(".figure").draggable( "option", "revert", false );
-          curPossibleCells.push(shahThreat);
-        }
-      }
+      //проверяем на возможность сделать рокировку
+      checkCastlingPossibility();
+      //закрашиваем ячейки
+      for (var i=0; i<curPossibleCells.length; i++)
+        $(document.getElementById("cell"+curPossibleCells[i])).addClass("possiblecell");
+      for (var i=0; i<possibleCastlingRooks.length; i++)
+        $(document.getElementById("cell"+possibleCastlingRooks[i].id)).addClass("possibleCastling");
     }
   }
 
 
   function handleDropEvent(event,ui)
   {
+    if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
+    {
+      $(".figure").draggable( "option", "revert", true );
+    }
+    else {
+      $(".figure").draggable( "option", "revert", false );
+    //debugger;
     var curCell = $(event.target).attr("id").substr(4,2);
 
     //отмена подсвечивания возможных ходов
     if (curPossibleCells!=null)
       for (var i=0; i<curPossibleCells.length; i++)
         $(document.getElementById("cell"+curPossibleCells[i])).removeClass("possiblecell");
+    for (var i=0; i<possibleCastlingRooks.length; i++)
+      $(document.getElementById("cell"+possibleCastlingRooks[i].id)).removeClass("possibleCastling");
 
-    if (curPossibleCells!=null && checkCurCell(curCell))
+    if ( (curPossibleCells!=null && checkCurCell(curCell)) || possibleCastlingRooks.length>0)
     {
       $(".figure").draggable( "option", "revert", false );
 
-      //пишем лог
-      var newLog = document.createElement('p');
-      newLog.innerHTML = curColor + " " + curFigure + " " + curPos + " - " + curCell;
-      document.getElementById('logbox').appendChild(newLog);
-
-      //взятие
-      if(!checkEnemyCellFreedom(curCell))
+      //сохраняем текущее положение фигуры
+      //document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
+      if( possibleCastlingRooks.length>0 && (curCell===possibleCastlingRooks[0].id || curCell===possibleCastlingRooks[1].id) )
       {
-        //удаляем фигуру
-        delFigureById(curCell);
+        castlingFunc(curCell);
+        possibleCastlingRooks=null;
+        //пишем лог
+        var newLog = document.createElement('p');
+        newLog.innerHTML = curPos + " - " + curCell + " CASTLING";
+        document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+      }
+      else
+      {
+        //пишем лог
+        var newLog = document.createElement('p');
+        newLog.innerHTML = curColor + " " + curFigure + " " + curPos + " - " + curCell;
+        document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+
+        //взятие
+        if(!checkEnemyCellFreedom(curCell))
+        {
+          //удаляем фигуру
+          delFigureById(curCell);
+        }
+
+        document.getElementById(curPos).setAttribute("id",curCell);
+        changeModel(curCell);
+        $("#"+curCell).removeClass("hasFirstStep");
+        $("#"+curCell).addClass("hasNotFirstStep");
       }
 
-      //сохраняем текущее положение фигуры
-      document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
-      $("#"+curCell).removeClass("hasFirstStep");
-      $("#"+curCell).addClass("hasNotFirstStep");
-
       showCommands();
-
-      //проверка шаха
-      checkShah();
 
       //меняем текущего игрока
       curPlayer=1-curPlayer;
@@ -137,12 +159,104 @@ $(document).ready(function(){
       else
         document.getElementById('turnmessage').innerHTML="Black";
 
-      if(shah)
-        shahSituation();
+      //проверка шаха
+      checkShah();
+      checkMat();
     }
     else{
       $(".figure").draggable( "option", "revert", true );
     }
+  }
+  }
+
+
+  function checkCastlingPossibility()
+  {
+    //рокировка
+    //1. перетягиваем короля к Ладье+
+    //2.1 Король+
+    //2.2 и ладья должны ни разу не ходить (has first step?)+
+    //3. один раз за игру+
+    //4. короткая и длинная+
+    //5. превращенная пешка не может делать рокировку
+    //6. между ладьей и королем ничего не должно быть+
+    if ( (curPlayer===0 && wasWhiteCastling) || (curPlayer===1 && wasBlackCastling))
+      return null;
+    possibleCastlingRooks=new Array();
+    if(getCurFigure(document.getElementById(curPos))==="king" && $(document.getElementById(curPos)).hasClass("hasFirstStep"))
+    {
+      if (checkIdFreedom(curPos[0]+(+curPos[1]+1)) && checkIdFreedom(curPos[0]+(+curPos[1]+2)) &&
+      getCurFigure(document.getElementById(curPos[0]+(+curPos[1]+3)))==="rook" &&
+      $(document.getElementById(curPos[0]+(+curPos[1]+3))).hasClass("hasFirstStep"))
+      {
+        possibleCastlingRooks.push(document.getElementById(curPos[0]+(+curPos[1]+3)));
+        return possibleCastlingRooks;
+      }
+      if (checkIdFreedom(curPos[0]+(+curPos[1]-1)) && checkIdFreedom(curPos[0]+(+curPos[1]-2)) &&
+      checkIdFreedom(curPos[0]+(+curPos[1]-3)) &&
+      getCurFigure(document.getElementById(curPos[0]+(+curPos[1]-4)))==="rook" &&
+      $(document.getElementById(curPos[0]+(+curPos[1]-4))).hasClass("hasFirstStep"))
+      {
+        possibleCastlingRooks.push(document.getElementById(curPos[0]+(+curPos[1]-4)));
+        return possibleCastlingRooks;
+      }
+    }
+  }
+
+
+  function castlingFunc(rookId)
+  {
+    debugger;
+    if(rookId[1]==8)
+    {
+      document.getElementById(rookId).style.right=150+'px';
+      document.getElementById(curPos).style.left=parseInt(document.getElementById(curPos).style.left)-75+'px';
+      document.getElementById(rookId).setAttribute("id", curPos[0]+(+curPos[1]+1));
+      document.getElementById(curPos).setAttribute("id", curPos[0]+(+curPos[1]+2));
+    }
+    else {
+      document.getElementById(rookId).style.right=-225+'px';
+      document.getElementById(curPos).style.left=parseInt(document.getElementById(curPos).style.left)+150+'px';
+      document.getElementById(rookId).setAttribute("id", curPos[0]+(+curPos[1]-1));
+      document.getElementById(curPos).setAttribute("id", curPos[0]+(+curPos[1]-2));
+    }
+    if(curPlayer===0)
+      wasWhiteCastling=true;
+    else
+      wasBlackCastling=true;
+  }
+
+
+  function checkIdFreedom(id)
+  {
+    for(var i=0; i<black.length; i++)
+    {
+      if(black[i].id===id)
+        return false;
+    }
+    for(var i=0; i<white.length; i++)
+    {
+      if(white[i].id===id)
+        return false;
+    }
+    return true;
+  }
+
+
+  function changeModel(newId)
+  {
+    var curCommand;
+    if(curPlayer===0)
+      curCommand=white;
+    else
+      curCommand=black;
+
+    for(var i=0; i<curCommand.length; i++)
+      if(curCommand[i].id===curPos)
+      {
+        curCommand[i].id=newId;
+        i=100;
+      }
   }
 
 
@@ -163,7 +277,8 @@ $(document).ready(function(){
     //лог
     var newLog = document.createElement('p');
     newLog.innerHTML = "Figure in cell " + id + " was taken!";
-    document.getElementById('logbox').appendChild(newLog);
+    //document.getElementById('logbox').appendChild(newLog);
+    document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
     //удаление с доски
     document.getElementById(id).parentNode.removeChild(document.getElementById(id));
   }
@@ -171,7 +286,6 @@ $(document).ready(function(){
 
   function checkCurCell(curCell)
   {
-
     for (var i=0; i<curPossibleCells.length; i++)
       if(curCell===curPossibleCells[i])
         return true;
@@ -181,28 +295,36 @@ $(document).ready(function(){
 
   function checkCellFreedom(curCell)
   {
+    //var newLog = document.createElement('p');
+    //newLog.innerHTML ="curPlayer:" + curPlayer +" curCell: " + curCell;
+    //document.getElementById('logbox').appendChild(newLog);
     for (var i=0; i<16; i++)
-      if( ( curPlayer===1 && $(black[i]).attr("id")===curCell) || ( curPlayer===0 && $(white[i]).attr("id")===curCell) )
-        return false;
+    {
+      if ( ( black[i] && curPlayer===1 && black[i].id===curCell) || ( white[i] && curPlayer===0 && white[i].id===curCell) )
+      return false;
+    }
     return true;
   }
 
 
   function checkEnemyCellFreedom(curCell)
   {
+    //debugger;
     for (var i=0; i<16; i++)
-      if( ( curPlayer===0 && $(black[i]).attr("id")===curCell) || ( curPlayer===1 && $(white[i]).attr("id")===curCell) )
+      if( ( black[i] && curPlayer===0 && black[i].id===curCell) || ( white[i] && curPlayer===1 && white[i].id===curCell) )
         return false;
       return true;
   }
 
+
   function checkRightPosition(curCell)
   {
-    if(( curCell[0]>=1 && curCell[0]<=8 ) && ( curCell[1]>=1 && curCell[1]<=8 ))
+    if(( curCell[0]>=1 && curCell[0]<=8 ) && ( curCell[1]>=1 && curCell[1]<=8 ) && curCell.length===2)
       return true;
     else
       return false;
   }
+
 
   function getCurFigure(curFigureElem)
   {
@@ -221,6 +343,204 @@ $(document).ready(function(){
   }
 
 
+  function showCommands()
+  {
+    var curBlack=" ";
+    var curWhite=" ";
+    for(var i=0; i<black.length; i++)
+      curBlack=curBlack+" "+$(black[i]).attr("id");
+    for(var i=0; i<white.length; i++)
+      curWhite=curWhite+" "+$(white[i]).attr("id");
+    var newLog = document.createElement('p');
+    newLog.innerHTML = "white: " + curWhite;
+    //document.getElementById('logbox').appendChild(newLog);
+    document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+    var newLog = document.createElement('p');
+    newLog.innerHTML = "black: " + curBlack;
+    //document.getElementById('logbox').appendChild(newLog);
+    document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+  }
+
+
+  function checkShah()
+  {
+    //debugger;
+    //суть проверки:
+    //проходим по possibleCells для каждой фигуры противника
+    //если есть возможность съесть короля на следующем ходе, значит - шах
+    var curCommand;
+    if(curPlayer===0)
+      curCommand=black;
+    else
+      curCommand=white;
+    curPlayer=1-curPlayer; //меняем для корректной работы вспомогательных функций
+    for(var i=0; i<curCommand.length; i++)
+    {
+      getPossibleCells(curCommand[i].id,
+                                curCommand[i].id[0],
+                                curCommand[i].id[1],
+                                getCurFigure(curCommand[i]));
+      var figurePossibleCells = globalPossibleCells;
+      for(var j=0; j<globalPossibleCells.length; j++)
+      {
+        if(globalPossibleCells.length!=0 && !checkEnemyCellFreedom(globalPossibleCells[j]))
+        {
+          if(getCurFigure(document.getElementById(globalPossibleCells[j]))==="king")
+          {
+            shah = true;
+            //shahThreat = $(curCommand[i]).attr("id");
+            var newLog = document.createElement('p');
+            newLog.innerHTML = "---------SHAH---------";
+            //document.getElementById('logbox').appendChild(newLog);
+            document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+            j=100;
+            i=100;
+          }
+        }
+      }
+    }
+    curPlayer=1-curPlayer;
+  }
+
+
+  function checkMat()
+  {
+    //debugger;
+    //1.проходим по всем фигурам следующего игрока
+    //2.берем possibleCells(другое имя) для каждой
+    //3.проверяем каждую possibleCells каждой фигуры в checkConcreteCellShah и удаляем ходы, ведущие к шаху
+    //4.если для каждой фигуры possible cells пуст, то дело пришло к мату
+    var checkingCommand;
+    if (curPlayer===0)
+      checkingMatCommand=white;
+    else
+      checkingMatCommand=black;
+
+    var isMat=true;
+    for(var i=0; i<checkingMatCommand.length; i++)
+    {
+      var checkingMatPossibleCells=getPossibleCells(checkingMatCommand[i].id,checkingMatCommand[i].id[0],
+        checkingMatCommand[i].id[1], getCurFigure(checkingMatCommand[i]));
+      /*var newLog = document.createElement('p');
+      newLog.innerHTML = checkingMatCommand[i].id + " " + getCurFigure(checkingMatCommand[i]);
+      document.getElementById('logbox').appendChild(newLog);*/
+      for (var j=0; j<checkingMatPossibleCells.length; j++)
+      {
+        if(checkConcreteCellShah(checkingMatCommand[i].id, checkingMatPossibleCells[j]))
+        {
+          checkingMatPossibleCells.splice(j,1);
+          j=j-1;
+        }
+      }
+      if (checkingMatPossibleCells.length>0)
+      {
+        isMat=false;
+        return;
+      }
+    }
+    if(isMat)
+    {
+      var newLog = document.createElement('p');
+      newLog.innerHTML="----------MAT----------";
+      //document.getElementById('logbox').appendChild(newLog);
+      document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+    }
+  }
+
+
+  function checkConcreteCellShah(oldId, possibleId)
+  {
+    //debugger;
+    //суть проверки:
+    //передаем потенциальный ход
+    //записываем его в black/white.id
+    //проверяем на шах
+    //изменяем обратно black/white
+    //возвращем true, если будет шах
+    var curCommand;
+    var otherCommand;
+    var changedI;
+    if(curPlayer===0)
+    {
+      curCommand=black;
+      otherCommand=white;
+    }
+    else
+    {
+      curCommand=white;
+      otherCommand=black;
+    }
+    //подставляем шаг
+    for(var i=0; i<otherCommand.length; i++)
+    {
+      if(otherCommand[i].id===oldId)
+      {
+        otherCommand[i].id=possibleId;
+        i=100;
+      }
+    }
+    curPlayer=1-curPlayer; //меняем для корректной работы вспомогательных функций
+    for(var i=0; i<curCommand.length; i++)
+    {
+      getPossibleCells(curCommand[i].id,
+                                curCommand[i].id[0],
+                                curCommand[i].id[1],
+                                getCurFigure(curCommand[i]));
+      var figurePossibleCells = globalPossibleCells;
+      for(var j=0; j<globalPossibleCells.length; j++)
+      {
+        if(globalPossibleCells.length!=0 && !checkEnemyCellFreedom(globalPossibleCells[j]))
+        {
+          if(getCurFigure(document.getElementById(globalPossibleCells[j]))==="king")
+          {
+            //проверка, можем ли мы скушать угрозу
+            //если можем скушать, то не удаляем этот потенциальный ход
+            if(curCommand[i].id===possibleId)
+            {
+              //otherCommand[changedI]=oldId;
+              for(var i=0; i<otherCommand.length; i++)
+              {
+                if(otherCommand[i].id===possibleId)
+                {
+                  otherCommand[i].id=oldId;
+                  i=100;
+                }
+              }
+              curPlayer=1-curPlayer;
+              return false;
+            }
+
+            j=100;
+            i=100;
+
+            //otherCommand[changedI]=oldId;
+            for(var i=0; i<otherCommand.length; i++)
+            {
+              if(otherCommand[i].id===possibleId)
+              {
+                otherCommand[i].id=oldId;
+                i=100;
+              }
+            }
+            curPlayer=1-curPlayer;
+            return true;
+          }
+        }
+      }
+    }
+    curPlayer=1-curPlayer;
+    for(var i=0; i<otherCommand.length; i++)
+    {
+      if(otherCommand[i].id===possibleId)
+      {
+        otherCommand[i].id=oldId;
+        i=100;
+      }
+    }
+  }
+
+
+// ПОЛУЧЕНИЕ ВОЗМОЖНЫХ ХОДОВ
   function getPossibleCells(curPos,curNumber,curLetter,curFigure)
   {
     var possibleCells = new Array();
@@ -296,7 +616,7 @@ $(document).ready(function(){
           if ( !checkEnemyCellFreedom(i+curLetter) )
           {
             possibleCells.push(i+curLetter);
-            i=0;
+            i=9;
           }
           else
             possibleCells.push(i+curLetter);
@@ -325,7 +645,7 @@ $(document).ready(function(){
           if ( !checkEnemyCellFreedom(curNumber+i) )
           {
             possibleCells.push(curNumber+i);
-            i=0;
+            i=9;
           }
           else
             possibleCells.push(curNumber+i);
@@ -363,7 +683,7 @@ $(document).ready(function(){
           if( !checkEnemyCellFreedom(i+j.toString()) )
           {
               possibleCells.push(i+j.toString());
-              i=0;
+              i=9;
           }
           else
             possibleCells.push(i+j.toString());
@@ -397,7 +717,7 @@ $(document).ready(function(){
           if( !checkEnemyCellFreedom(i+j.toString()) )
           {
               possibleCells.push(i+j.toString());
-              i=0;
+              i=9;
           }
           else
             possibleCells.push(i+j.toString());
@@ -456,7 +776,7 @@ $(document).ready(function(){
           if( !checkEnemyCellFreedom(i+j.toString()) )
           {
               possibleCells.push(i+j.toString());
-              i=0;
+              i=9;
           }
           else
             possibleCells.push(i+j.toString());
@@ -490,7 +810,7 @@ $(document).ready(function(){
           if( !checkEnemyCellFreedom(i+j.toString()) )
           {
               possibleCells.push(i+j.toString());
-              i=0;
+              i=9;
           }
           else
             possibleCells.push(i+j.toString());
@@ -521,7 +841,7 @@ $(document).ready(function(){
           if ( !checkEnemyCellFreedom(i+curLetter) )
           {
             possibleCells.push(i+curLetter);
-            i=0;
+            i=9;
           }
           else
             possibleCells.push(i+curLetter);
@@ -550,7 +870,7 @@ $(document).ready(function(){
           if ( !checkEnemyCellFreedom(curNumber+i) )
           {
             possibleCells.push(curNumber+i);
-            i=0;
+            i=9;
           }
           else
             possibleCells.push(curNumber+i);
@@ -577,105 +897,13 @@ $(document).ready(function(){
           possibleCells.push(prePossibleCells[i]);
       }
     }
+
+    for (var i=0; i<possibleCells.length; i++)
+      if(!checkRightPosition(possibleCells[i]))
+        possibleCells.splice(i,1);
+
+    globalPossibleCells=possibleCells;
     return possibleCells;
-  }
-
-  function showCommands()
-  {
-    var curBlack=" ";
-    var curWhite=" ";
-    for(var i=0; i<black.length; i++)
-      curBlack=curBlack+" "+$(black[i]).attr("id");
-    for(var i=0; i<white.length; i++)
-      curWhite=curWhite+" "+$(white[i]).attr("id");
-    var newLog = document.createElement('p');
-    newLog.innerHTML = "white: " + curWhite;
-    document.getElementById('logbox').appendChild(newLog);
-    var newLog = document.createElement('p');
-    newLog.innerHTML = "black: " + curBlack;
-    document.getElementById('logbox').appendChild(newLog);
-  }
-
-
-  function checkShah()
-  {
-    //проходим по possibleCells для каждой фигуры
-    //если есть возможность съесть короля на следующем ходе, значит - шах
-    var curCommand;
-    if(curPlayer===0)
-      curCommand=white;
-    else
-      curCommand=black;
-
-    for(var i=0; i<curCommand.length; i++)
-    {
-      var figurePossibleCells = getPossibleCells($(curCommand[i]).attr("id"),
-                                $(curCommand[i]).attr("id")[0],
-                                $(curCommand[i]).attr("id")[1],
-                                getCurFigure(curCommand[i]));
-      for(var j=0; j<figurePossibleCells.length; j++)
-      {
-        if(!checkEnemyCellFreedom(figurePossibleCells[j]))
-        {
-          if(getCurFigure(document.getElementById(figurePossibleCells[j]))==="king")
-          {
-            shah = true;
-            shahThreat = $(curCommand[i]).attr("id");
-            var newLog = document.createElement('p');
-            newLog.innerHTML = "---------SHAH---------";
-            document.getElementById('logbox').appendChild(newLog);
-            j=100;
-            i=100;
-          }
-        }
-      }
-    }
-  }
-
-
-  function shahSituation()
-  {
-    //проверяем, можно ли съесть угрозу
-    var curCommand;
-    if(curPlayer===0)
-      curCommand=white;
-    else
-    curCommand=black;
-
-    for(var i=0; i<curCommand.length; i++)
-    {
-      var figurePossibleCells = getPossibleCells($(curCommand[i]).attr("id"),
-                                $(curCommand[i]).attr("id")[0],
-                                $(curCommand[i]).attr("id")[1],
-                                getCurFigure(curCommand[i]));
-      for(var j=0; j<figurePossibleCells.length; j++)
-      {
-        if(!checkEnemyCellFreedom(figurePossibleCells[j]))
-        {
-          if(figurePossibleCells[j]===shahThreat)
-          {
-            killer=$(curCommand[i]).attr("id");
-            var newLog = document.createElement('p');
-            newLog.innerHTML = "YOU CAN KILL " + getCurFigure(document.getElementById(figurePossibleCells[j]))
-            + figurePossibleCells[j] + " with killer" + killer;
-            document.getElementById('logbox').appendChild(newLog);
-            $(document.getElementById("cell"+shahThreat)).addClass("threatCell");
-          }
-        }
-      }
-    }
-
-    //запрещаем другие действия и предлагаем съесть угрозу
-    //потестить этот вариант развития событий и шаги
-
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //переписать шах-проверку для конкретной фигуры без перебора всей команды - он лишний
-    //дописать развитие событий для нескольких киллеров
-
-    //ищем возможные шаги для короля
-    //проверяем их на ситуацию шаха
-
-    //ищем возможные шаги, чтоб спрятать короля
   }
 
 });

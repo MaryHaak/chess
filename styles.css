@@ -33,20 +33,27 @@ html, body, div{
 }
 
 .possiblecell{
-	/*border: 2px solid #1B5E20;
-	box-sizing: border-box;
-	background-color: #1B5E20;*/
 	font-weight: bold;;
 	color: yellow;
 }
 
+.redpossiblecell{
+	font-weight: bold;;
+	color: red;
+}
+
+.possibleCastling{
+	background-color: yellow;
+}
+
 .threatCell{
-	background-color: red;  
+	background-color: red;
 }
 
 .figure{
 	height: 75px;
 	width: 75px;
+	z-index: 100;
 }
 
 .blackfigure.rook{
