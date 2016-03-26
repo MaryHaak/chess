@@ -144,6 +144,10 @@ html, body, div{
 	display: inline-block;
 }
 
+.popup-box div:hover {
+	outline: 1px solid black;	
+}
+
 #blackout {
     background: rgba(0,0,0,0.7);
     position: absolute;
