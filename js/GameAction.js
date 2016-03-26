@@ -1,20 +1,18 @@
 $(document).ready(function(){
 
-//ШАХ & МАТ
-//шах-----+
-//удаление шагов, приводящих к шаху -----+
-//защита короля-----+
-//"поедание" фигуры противника, которой сделан шах---+
-//баг - появление undefined в checkConcreteCellShah при вызове из checkMat----+
-//рокировка-----+
+//мат+
+//шах+
+//защита короля+
+//рокировка+
+//взятие на проходе+
+//превращение пешки+
 
-//превращение пешки - превращенная пешка не может делать рокировку
-//взятие на проходе
+//рокировка - для фигур, которые еще не сдвигались?
 //пат
-
-//баг для пешки(не перескакивать)
+//баг для пешки (не перескакивать)
 //порядок в коде
 //крутое прекращение игры при мате и логи писать сверху
+//ховер в поп-апе
 //обновить github
 
   //информация о текущем ходе
@@ -34,6 +32,7 @@ $(document).ready(function(){
   var possibleCastlingRooks;
   var wasWhiteCastling = false;
   var wasBlackCastling = false;
+  var possibleENPassants; //возможные взятия на проходе
 
   //создаем сообщение о текущем игроке
   var turnMessage = document.createElement('div');
@@ -69,6 +68,7 @@ $(document).ready(function(){
     curNumber = $(event.target).attr("id")[0];
     curLetter = $(event.target).attr("id")[1];
     curPos = curNumber+curLetter;
+    possibleENPassants = new Array();
 
     //очередность ходов
     if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
@@ -144,10 +144,38 @@ $(document).ready(function(){
           delFigureById(curCell);
         }
 
+        //взятие на проходе
+        for(var i=0; i<curPossibleCells.length; i++)
+        {
+          if( curCell==curPossibleCells[i] && ( curPossibleCells[i]==possibleENPassants[0] || curPossibleCells[i]==possibleENPassants[1] ) )
+          {
+            if(curPlayer===0)
+              delFigureById((+curCell[0]-1)+curCell[1]);
+            else
+              delFigureById((+curCell[0]+1)+curCell[1]);
+          }
+        }
+
         document.getElementById(curPos).setAttribute("id",curCell);
         changeModel(curCell);
-        $("#"+curCell).removeClass("hasFirstStep");
-        $("#"+curCell).addClass("hasNotFirstStep");
+        if($("#"+curCell).hasClass("hasFirstStep"))
+        {
+          $("#"+curCell).removeClass("hasFirstStep");
+          $("#"+curCell).addClass("hasNotFirstStep");
+          $("#"+curCell).addClass("hasSecondStep");
+        }
+        else {
+          if($("#"+curCell).hasClass("hasSecondStep"))
+          {
+            $("#"+curCell).removeClass("hasSecondStep");
+          }
+        }
+
+        //превращение пешки
+        if ( curFigure==="pawn" && ( ( curPlayer===0 && curCell[0]==8 ) || ( curPlayer===1 && curCell[0]==1 ) ) )
+        {
+          popUp(curCell);
+        }
       }
 
       showCommands();
@@ -167,6 +195,66 @@ $(document).ready(function(){
       $(".figure").draggable( "option", "revert", true );
     }
   }
+  }
+
+
+  function popUp(curCell)
+  {
+    //показываем поп-ап
+    $('body').append('<div id="blackout"></div>');
+    var boxWidth = 310;
+    var winWidth = $(window).width();
+    var winHeight = $(document).height();
+    var scrollPos = $(window).scrollTop();
+    var disWidth = (winWidth - boxWidth) / 2
+    var disHeight = scrollPos + 150;
+    $('.popup-box').css({'width' : boxWidth+'px', 'left' : disWidth+'px', 'top' : disHeight+'px', display: 'block'});
+    $('#blackout').css({'width' : winWidth+'px', 'height' : winHeight+'px', display: 'block'});
+
+    if(curPlayer===0)
+    {
+      $("#magicqueen").css({"background-image" : "url(\"images/whitequeen.png\")"});
+      $("#magiceleph").css({"background-image" : "url(\"images/whiteeleph.png\")"});
+      $("#magichorse").css({"background-image" : "url(\"images/whitehorse.png\")"});
+      $("#magicrook").css({"background-image" : "url(\"images/whiterook.png\")"});
+    }
+    else
+    {
+      $("#magicqueen").css({"background-image" : "url(\"images/blackqueen.png\")"});
+      $("#magiceleph").css({"background-image" : "url(\"images/blackeleph.png\")"});
+      $("#magichorse").css({"background-image" : "url(\"images/blackhorse.png\")"});
+      $("#magicrook").css({"background-image" : "url(\"images/blackrook.png\")"});
+    }
+
+    $(".popup-box div").click(function() {
+      //скрываем окно
+        var scrollPos = $(window).scrollTop();
+        $('.popup-box').hide();
+        $('#blackout').hide();
+        $("html,body").css("overflow","auto");
+        $('html').scrollTop(scrollPos);
+    });
+
+    $('#magicqueen').click(function() {
+        debugger;
+        $("#"+curCell).removeClass("pawn");
+        $("#"+curCell).addClass("queen");
+    });
+    $('#magiceleph').click(function() {
+        debugger;
+        $("#"+curCell).removeClass("pawn");
+        $("#"+curCell).addClass("eleph");
+    });
+    $('#magichorse').click(function() {
+        debugger;
+        $("#"+curCell).removeClass("pawn");
+        $("#"+curCell).addClass("horse");
+    });
+    $('#magicrook').click(function() {
+        debugger;
+        $("#"+curCell).removeClass("pawn");
+        $("#"+curCell).addClass("rook");
+    });
   }
 
 
@@ -540,6 +628,45 @@ $(document).ready(function(){
   }
 
 
+  function checkENPassant(possibleCells)
+  {
+    //если черный и на 5 ряду или белый и на 4 ряду
+    //проходим по всем пешкам противника
+    //если противник на 4 ряду для черного и 5 для белого + только что сделал ход
+    //можно походить по горизонтали и скушать противника при этом
+    if(curPlayer===0 && curPos[0]==5)
+    {
+      checkEnemyPosForENPassant(5, possibleCells);
+    }
+    if(curPlayer===1 && curPos[0]==4)
+    {
+      checkEnemyPosForENPassant(4, possibleCells);
+    }
+  }
+
+
+  function checkEnemyPosForENPassant(checkingLine, possibleCells)
+  {
+    var enemy;
+    if(curPlayer===0)
+      enemy=black;
+    else
+      enemy=white;
+
+    for (var i=0; i<enemy.length; i++)
+    {
+      if(enemy[i].id[0]==checkingLine && $("#"+enemy[i].id).hasClass("hasSecondStep"))
+      {
+        if(curPlayer===0)
+          possibleCells.push((+enemy[i].id[0]+1).toString()+enemy[i].id[1])
+        else
+          possibleCells.push((+enemy[i].id[0]-1).toString()+enemy[i].id[1])
+        possibleENPassants.push(possibleCells[possibleCells.length-1]);
+      }
+    }
+  }
+
+
 // ПОЛУЧЕНИЕ ВОЗМОЖНЫХ ХОДОВ
   function getPossibleCells(curPos,curNumber,curLetter,curFigure)
   {
@@ -589,6 +716,9 @@ $(document).ready(function(){
         if(!checkEnemyCellFreedom((+curNumber-1).toString()+(+curLetter-1)))
           possibleCells.push((+curNumber-1).toString()+(+curLetter-1));
       }
+
+      //проверяем на возможность сделать взятие на проходе и добавляем ходы
+      checkENPassant(possibleCells);
     }
 
     //------------------------ROOK------------------------
