@@ -11,10 +11,31 @@ $(document).ready(function(){
 //баг для пешки (не перескакивать)
 //рокировка - для фигур, которые еще не сдвигались?
 //рокировка во время шаха?
-//порядок в коде
-//крутое прекращение игры при мате и логи писать сверху
-//ховер в поп-апе
 //обновить github
+
+
+
+
+
+//логи ходов
+var logBox = document.createElement('div');
+logBox.setAttribute('id','logbox');
+document.body.appendChild(logBox);
+var newLog = document.createElement('p');
+newLog.innerHTML = "Your color: " + document.body.getAttribute("id");
+document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+
+/*
+socket.on('game_find', function(data){
+  var massage = jQuery.parseJSON(data);
+
+  var newLog = document.createElement('p');
+  if(data.hasRoom)
+    newLog.innerHTML = "You have the room and can start game";
+  else
+    newLog.innerHTML = "You should wait for other player";
+  document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+});*/
 
   //информация о текущем ходе
   var curPlayer = 0; //0-white, 1-black
@@ -38,12 +59,8 @@ $(document).ready(function(){
   //создаем сообщение о текущем игроке
   var turnMessage = document.createElement('div');
   turnMessage.setAttribute('id','turnmessage');
-  turnMessage.innerHTML="White";
+  turnMessage.innerHTML="Current player:" + "White";
   document.body.appendChild(turnMessage);
-  //логи ходов
-  var logBox = document.createElement('div');
-  logBox.setAttribute('id','logbox');
-  document.body.appendChild(logBox);
 
 
   $(".figure").draggable({
@@ -1036,5 +1053,6 @@ $(document).ready(function(){
     globalPossibleCells=possibleCells;
     return possibleCells;
   }
+
 
 });

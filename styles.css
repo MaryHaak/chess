@@ -145,7 +145,7 @@ html, body, div{
 }
 
 .popup-box div:hover {
-	outline: 1px solid black;	
+	outline: 1px solid black;
 }
 
 #blackout {
@@ -156,4 +156,17 @@ html, body, div{
     z-index: 999999;
     left: 0;
     display: none;
+}
+
+#launch {
+	background-color: #0097A7;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	left: 0;
+	font-size: 200%;
+	text-align: center;
+	color: white;
+	padding-top: 200px;
 }
