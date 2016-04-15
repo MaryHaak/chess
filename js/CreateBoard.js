@@ -6,27 +6,54 @@ $(document).ready(function(){
   document.body.appendChild(board);
 
 
+
   //заполяем поле клетками
   var cells = new Array();
-  var color=true;
-  for(var i=8; i!=0; i--){
-    cells[i] = new Array();
-    for(var j=1; j<=8; j++){
-      cells[i][j] = document.createElement('div');
-      if(color)
-        cells[i][j].setAttribute('class',"cell whitecell")
-      else
-        cells[i][j].setAttribute('class',"cell blackcell");
-      if(j!=8)
-        color = !color;
-      cells[i][j].setAttribute('id','cell'+i.toString()+j.toString());
-      document.getElementById('board').appendChild(cells[i][j]);
-      var cellIndex = document.createElement("p");
-      cellIndex.innerHTML = i + " " + j;
-      cellIndex.setAttribute('class',"index");
-      document.getElementById('cell'+i.toString()+j.toString()).appendChild(cellIndex);
+
+  if(myColor=="white")
+  {
+    var color=true;
+    for(var i=8; i!=0; i--){
+      cells[i] = new Array();
+      for(var j=1; j<=8; j++){
+        cells[i][j] = document.createElement('div');
+        if(color)
+          cells[i][j].setAttribute('class',"cell whitecell")
+        else
+          cells[i][j].setAttribute('class',"cell blackcell");
+        if(j!=8)
+          color = !color;
+        cells[i][j].setAttribute('id','cell'+i.toString()+j.toString());
+        document.getElementById('board').appendChild(cells[i][j]);
+        var cellIndex = document.createElement("p");
+        cellIndex.innerHTML = i + " " + j;
+        cellIndex.setAttribute('class',"index");
+        document.getElementById('cell'+i.toString()+j.toString()).appendChild(cellIndex);
+      }
     }
   }
+  else {
+    var color=false;
+    for(var i=1; i!=9; i++){
+      cells[i] = new Array();
+      for(var j=8; j!=0; j--){
+        cells[i][j] = document.createElement('div');
+        if(color)
+          cells[i][j].setAttribute('class',"cell whitecell")
+        else
+          cells[i][j].setAttribute('class',"cell blackcell");
+        if(j!=1)
+          color = !color;
+        cells[i][j].setAttribute('id','cell'+i.toString()+j.toString());
+        document.getElementById('board').appendChild(cells[i][j]);
+        var cellIndex = document.createElement("p");
+        cellIndex.innerHTML = i + " " + j;
+        cellIndex.setAttribute('class',"index");
+        document.getElementById('cell'+i.toString()+j.toString()).appendChild(cellIndex);
+      }
+    }
+  }
+
 
     //расставляем фигуры
     //создаем два массива div-ов - команды

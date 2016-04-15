@@ -15,8 +15,6 @@ $(document).ready(function(){
 
 
 
-
-
 //логи ходов
 var logBox = document.createElement('div');
 logBox.setAttribute('id','logbox');
@@ -38,7 +36,7 @@ socket.on('game_find', function(data){
 });*/
 
   //информация о текущем ходе
-  var curPlayer = 0; //0-white, 1-black
+  window.curPlayer = 0; //0-white, 1-black
   var curColor = null;
   var curFigure = null;
   var curPos = null;
@@ -86,10 +84,10 @@ socket.on('game_find', function(data){
     curNumber = $(event.target).attr("id")[0];
     curLetter = $(event.target).attr("id")[1];
     curPos = curNumber+curLetter;
-    possibleENPassants = new Array();
+    possibleENPassants = new Array();    
 
     //очередность ходов
-    if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
+    if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")) || (myColor==="white" && curPlayer===1) || (myColor==="black" && curPlayer===0))
     {
       $(".figure").draggable( "option", "revert", true );
     }
@@ -117,7 +115,7 @@ socket.on('game_find', function(data){
 
   function handleDropEvent(event,ui)
   {
-    if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")))
+    if((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")  || (myColor==="white" && curPlayer===1) || (myColor==="black" && curPlayer===0))
     {
       $(".figure").draggable( "option", "revert", true );
     }
@@ -144,7 +142,6 @@ socket.on('game_find', function(data){
         castlingFunc(curCell);
         possibleCastlingRooks=null;
         //пишем лог
-        var newLog = document.createElement('p');
         newLog.innerHTML = curPos + " - " + curCell + " CASTLING";
         document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
       }
@@ -174,8 +171,11 @@ socket.on('game_find', function(data){
           }
         }
 
-        document.getElementById(curPos).setAttribute("id",curCell);
-        changeModel(curCell);
+
+
+        changeBoardFunc(curPos[0], curPos[1], curCell[0], curCell[1]);
+        socket.emit('turn_move', {from:{x:curPos[0], y:curPos[1]}, to:{x:curCell[0], y:curCell[1]}});
+
         if($("#"+curCell).hasClass("hasFirstStep"))
         {
           $("#"+curCell).removeClass("hasFirstStep");
@@ -200,6 +200,7 @@ socket.on('game_find', function(data){
 
       //меняем текущего игрока
       curPlayer=1-curPlayer;
+
       if(curPlayer===0)
         document.getElementById('turnmessage').innerHTML="White";
       else
@@ -215,6 +216,71 @@ socket.on('game_find', function(data){
   }
   }
 
+  window.changeBoardFunc = function changeBoard(x1, y1, x2, y2)
+  {
+    document.getElementById(x1+y1).setAttribute("id", x2.toString()+y2);
+    changeModel(x2.toString()+y2);
+  }
+
+  window.moveFigureFunc = function(x1, y1, x2, y2)
+  {
+    //alert('cell'+x2.toString()+y2);
+    /*var newLog = document.createElement('p');
+    newLog.innerHTML = document.getElementById('cell'+x1.toString()+y1).childNodes[0].id;
+    document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);*/
+
+    document.getElementById('cell'+x2.toString()+y2).appendChild(document.getElementById('cell'+x1.toString()+y1).childNodes[1]);
+
+    //document.getElementById(x1.toString()+y1+'cell').removeChild(document.getElementById(x1.toString()+y1+'cell').childNodes[0]);
+  }
+/*
+  function moveFigure(x1,y1,x2,y2)
+  {
+    var curFigure = getElementById('cell' + x1 + y1).childNodes[0];
+    getElementById('cell' + x2 + y2).appendChild(curFigure);
+  }*/
+
+  /*function letterToNum(letter)
+  {
+    if(letter==="a")
+      return '1';
+    if(letter==="b")
+      return '2';
+    if(letter==="c")
+      return '3';
+    if(letter==="d")
+      return '4';
+    if(letter==="e")
+      return '5';
+    if(letter==="f")
+      return '6';
+    if(letter==="g")
+      return '7';
+    if(letter==="h")
+      return '8';
+  }*/
+
+  function numToLetter(num)
+  {
+    if(num==="1")
+      return 'a';
+    if(num==="2")
+      return 'b';
+    if(num==="3")
+      return 'c';
+    if(num==="4")
+      return 'd';
+    if(num==="5")
+      return 'e';
+    if(num==="6")
+      return 'f';
+    if(num==="7")
+      return 'g';
+    if(num==="8")
+      return 'h';
+
+
+  }
 
   function popUp(curCell)
   {

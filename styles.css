@@ -158,7 +158,7 @@ html, body, div{
     display: none;
 }
 
-#launch {
+/*#launch {
 	background-color: #0097A7;
 	position: absolute;
 	top: 0;
@@ -169,4 +169,80 @@ html, body, div{
 	text-align: center;
 	color: white;
 	padding-top: 200px;
+}*/
+
+#launch {
+	font-size: 200%;
+	text-align: center;
+	padding-top: 200px;
+	color: #0097A7;
+}
+
+#endbutton {
+		background-color: #006064;
+    border: none;
+    color: white;
+    padding: 15px 35px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+		z-index: 100;
+		display: block;
+		margin: 0 auto;
+}
+
+#endbutton:hover {
+		background-color: #0097A7;
+    border: none;
+    color: white;
+    padding: 15px 35px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+		z-index: 100;
+		display: block;
+		margin: 0 auto;
+}
+
+#byetext {
+	position: absolute;
+	border-radius: 5px;
+	background: #fff;
+	display: none;
+	box-shadow: 1px 1px 5px rgba(0,0,0,0.2);
+	z-index: 9999999;
+	background: #BDBDBD;
+	padding: 30px;
+}
+
+#endblackout {
+    background: rgba(0,0,0,0.7);
+    position: absolute;
+		height: 100%;
+		width: 100%;
+		top: 0;
+    overflow: hidden;
+    z-index: 999999;
+}
+
+#endblackout #endbutton {	
+	z-index: 10000000;
+}
+
+#endpopup {
+	position: absolute;
+	border-radius: 5px;
+	background: #fff;
+	display: block;
+	box-shadow: 1px 1px 5px rgba(0,0,0,0.2);
+	z-index: 9999999;
+	background: #BDBDBD;
+	padding: 30px;
+	margin-left: 20%;
+	margin-right: 20%;
+	width: 60%;
+	height: 300px;
+	margin-top: 200px;
 }
