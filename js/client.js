@@ -23,23 +23,34 @@ socket.on('game_end', function(data){
 });
 
 socket.on('player_move', function(data){
-
-  var newLog = document.createElement('p');
-  newLog.innerHTML = data.from.x + data.from.y + " -- " + data.to.x + data.to.y;
-  document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
-  changeBoardFunc(data.from.x, data.from.y, data.to.x, data.to.y);
-  moveFigureFunc(data.from.x, data.from.y, data.to.x, data.to.y);
-
   //меняем цвет
   if(data.playerColor=="white")
   {
-    curPlayer=1;
+    curPlayer=0;
     document.getElementById('turnmessage').innerHTML="Black";
   }
   else {
-    curPlayer=0;
+    curPlayer=1;
     document.getElementById('turnmessage').innerHTML="White";
   }
+  var x1 = data.from.y;
+  var y1 = data.from.x;
+  var x2 = data.to.y;
+  var y2 = data.to.x;
+  y1=letterToNum(y1);
+  y2=letterToNum(y2);
+  var newLog = document.createElement('p');
+  newLog.innerHTML = data.playerColor + " " + data.from.x + data.from.y + " - " + data.to.x + data.to.y;
+  document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+  debugger;
+  //взятие
+  if(!checkEnemyCellFreedom(x2.toString()+y2))
+  {
+    delFigureById(x2.toString()+y2);
+  }
+  changeBoardFunc(x1, y1, x2, y2);
+  moveFigureFunc(x1, y1, x2, y2);
+  curPlayer=1-curPlayer;
 });
 
 socket.on('game_found', function(data){

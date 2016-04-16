@@ -13,7 +13,7 @@ io.sockets.on('connection', function (socket) {
   var ID = datetime;
   socket.ID = ID;
   playersNumber++;
-  queue.push(socket);
+
 
   socket.on('turn_move', function (data) {
     //socket.emit('game_end', {msg: 'leave', winnerColor: null});
@@ -26,7 +26,7 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('game_find', function(){
-
+    queue.push(socket);
     if ( queue.length > 1 )
     {
       /*var socket1 = queue[0];

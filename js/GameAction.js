@@ -75,7 +75,6 @@ socket.on('game_find', function(data){
 
   function handleDragStart(event,ui)
   {
-    //debugger;
     if($(event.target).hasClass("whitefigure"))
       curColor = "white"
     else
@@ -84,7 +83,7 @@ socket.on('game_find', function(data){
     curNumber = $(event.target).attr("id")[0];
     curLetter = $(event.target).attr("id")[1];
     curPos = curNumber+curLetter;
-    possibleENPassants = new Array();    
+    possibleENPassants = new Array();
 
     //очередность ходов
     if(((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")) || (myColor==="white" && curPlayer===1) || (myColor==="black" && curPlayer===0))
@@ -109,6 +108,12 @@ socket.on('game_find', function(data){
         $(document.getElementById("cell"+curPossibleCells[i])).addClass("possiblecell");
       for (var i=0; i<possibleCastlingRooks.length; i++)
         $(document.getElementById("cell"+possibleCastlingRooks[i].id)).addClass("possibleCastling");
+      if(curPossibleCells.length==0)
+      {
+        var newLog = document.createElement('p');
+        newLog.innerHTML = "----------PAT----------";
+        document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+      }
     }
   }
 
@@ -171,10 +176,15 @@ socket.on('game_find', function(data){
           }
         }
 
+        //сохраняем текущее положение фигуры
+        document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
+        $("#"+curCell).removeClass("hasFirstStep");
+        $("#"+curCell).addClass("hasNotFirstStep");
+        changeModel(curCell);
 
-
-        changeBoardFunc(curPos[0], curPos[1], curCell[0], curCell[1]);
-        socket.emit('turn_move', {from:{x:curPos[0], y:curPos[1]}, to:{x:curCell[0], y:curCell[1]}});
+        //changeBoardFunc(curPos[0], curPos[1], curCell[0], curCell[1]);
+        console.log(numToLetter(curPos[1]) + curPos[0] + " " + numToLetter(curCell[1]) + curCell[0]);
+        socket.emit('turn_move', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}});
 
         if($("#"+curCell).hasClass("hasFirstStep"))
         {
@@ -196,7 +206,7 @@ socket.on('game_find', function(data){
         }
       }
 
-      showCommands();
+      //showCommands();
 
       //меняем текущего игрока
       curPlayer=1-curPlayer;
@@ -216,10 +226,23 @@ socket.on('game_find', function(data){
   }
   }
 
-  window.changeBoardFunc = function changeBoard(x1, y1, x2, y2)
+  window.changeBoardFunc = function(x1, y1, x2, y2)
   {
-    document.getElementById(x1+y1).setAttribute("id", x2.toString()+y2);
-    changeModel(x2.toString()+y2);
+    //console.log(x1.toString() + y1 + " " + x2.toString() + y2);
+    document.getElementById(x1.toString()+y1).setAttribute("id", x2.toString()+y2);
+    //changeModel(x2.toString()+y2);
+    var curCommand;
+    if(curPlayer===0)
+      curCommand=white;
+    else
+      curCommand=black;
+
+    for(var i=0; i<curCommand.length; i++)
+      if(curCommand[i].id==(x1.toString()+y1))
+      {
+        curCommand[i].id=newId;
+        i=100;
+      }
   }
 
   window.moveFigureFunc = function(x1, y1, x2, y2)
@@ -240,44 +263,44 @@ socket.on('game_find', function(data){
     getElementById('cell' + x2 + y2).appendChild(curFigure);
   }*/
 
-  /*function letterToNum(letter)
+  window.letterToNum = function (letter)
   {
-    if(letter==="a")
-      return '1';
-    if(letter==="b")
-      return '2';
-    if(letter==="c")
-      return '3';
-    if(letter==="d")
-      return '4';
-    if(letter==="e")
-      return '5';
-    if(letter==="f")
-      return '6';
-    if(letter==="g")
-      return '7';
-    if(letter==="h")
-      return '8';
-  }*/
+    if(letter==="a" || letter==="A")
+      return 1;
+    if(letter==="b" || letter==="B")
+      return 2;
+    if(letter==="c" || letter==="C")
+      return 3;
+    if(letter==="d" || letter==="D")
+      return 4;
+    if(letter==="e" || letter==="E")
+      return 5;
+    if(letter==="f" || letter==="F")
+      return 6;
+    if(letter==="g" || letter==="G")
+      return 7;
+    if(letter==="h" || letter==="H")
+      return 8;
+  }
 
-  function numToLetter(num)
+  window.numToLetter = function (num)
   {
-    if(num==="1")
-      return 'a';
-    if(num==="2")
-      return 'b';
-    if(num==="3")
-      return 'c';
-    if(num==="4")
-      return 'd';
-    if(num==="5")
-      return 'e';
-    if(num==="6")
-      return 'f';
-    if(num==="7")
-      return 'g';
-    if(num==="8")
-      return 'h';
+    if(num==1)
+      return 'A';
+    if(num==2)
+      return 'B';
+    if(num==3)
+      return 'C';
+    if(num==4)
+      return 'D';
+    if(num==5)
+      return 'E';
+    if(num==6)
+      return 'F';
+    if(num==7)
+      return 'G';
+    if(num==8)
+      return 'H';
 
 
   }
@@ -432,7 +455,7 @@ socket.on('game_find', function(data){
   }
 
 
-  function delFigureById(id)
+  window.delFigureById = function(id)
   {
     //удаление из списка
     if(curPlayer===0)
@@ -479,11 +502,11 @@ socket.on('game_find', function(data){
   }
 
 
-  function checkEnemyCellFreedom(curCell)
+  window.checkEnemyCellFreedom = function(curCell)
   {
     //debugger;
     for (var i=0; i<16; i++)
-      if( ( black[i] && curPlayer===0 && black[i].id===curCell) || ( white[i] && curPlayer===1 && white[i].id===curCell) )
+      if( ( black[i] && curPlayer==0 && black[i].id==curCell) || ( white[i] && curPlayer==1 && white[i].id==curCell) )
         return false;
       return true;
   }
