@@ -14,7 +14,6 @@ io.sockets.on('connection', function (socket) {
   socket.ID = ID;
   playersNumber++;
 
-
   socket.on('turn_move', function (data) {
     //socket.emit('game_end', {msg: 'leave', winnerColor: null});
     console.log("yay");

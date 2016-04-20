@@ -93,6 +93,7 @@ socket.on('game_find', function(data){
     else {
       $(".figure").draggable( "option", "revert", false );
       //определение потенциально возможных ходов
+
       curPossibleCells = getPossibleCells(curPos,curNumber,curLetter,curFigure);
       //убираем шаги, которые приведут к шаху
       for (var i=0; i<curPossibleCells.length; i++)
@@ -177,10 +178,12 @@ socket.on('game_find', function(data){
         }
 
         //сохраняем текущее положение фигуры
+        moveFigureFunc(ui.draggable.prop("id")[0], ui.draggable.prop("id")[1], curCell[0], curCell[1]);
+        $(ui.helper).css("left","");
+			  $(ui.helper).css("top","");
         document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
-        $("#"+curCell).removeClass("hasFirstStep");
-        $("#"+curCell).addClass("hasNotFirstStep");
-        changeModel(curCell);
+        //$("#"+curCell).removeClass("hasFirstStep");
+        //$("#"+curCell).addClass("hasNotFirstStep");
 
         //changeBoardFunc(curPos[0], curPos[1], curCell[0], curCell[1]);
         console.log(numToLetter(curPos[1]) + curPos[0] + " " + numToLetter(curCell[1]) + curCell[0]);
@@ -188,9 +191,9 @@ socket.on('game_find', function(data){
 
         if($("#"+curCell).hasClass("hasFirstStep"))
         {
-          $("#"+curCell).removeClass("hasFirstStep");
-          $("#"+curCell).addClass("hasNotFirstStep");
           $("#"+curCell).addClass("hasSecondStep");
+          $("#"+curCell).addClass("hasNotFirstStep");
+          $("#"+curCell).removeClass("hasFirstStep");
         }
         else {
           if($("#"+curCell).hasClass("hasSecondStep"))
@@ -228,40 +231,51 @@ socket.on('game_find', function(data){
 
   window.changeBoardFunc = function(x1, y1, x2, y2)
   {
-    //console.log(x1.toString() + y1 + " " + x2.toString() + y2);
     document.getElementById(x1.toString()+y1).setAttribute("id", x2.toString()+y2);
-    //changeModel(x2.toString()+y2);
-    var curCommand;
-    if(curPlayer===0)
-      curCommand=white;
-    else
-      curCommand=black;
 
-    for(var i=0; i<curCommand.length; i++)
-      if(curCommand[i].id==(x1.toString()+y1))
+    if($("#"+x2.toString()+y2).hasClass("hasFirstStep"))
+    {
+      $("#"+x2.toString()+y2).removeClass("hasFirstStep");
+      $("#"+x2.toString()+y2).addClass("hasSecondStep");
+      $("#"+x2.toString()+y2).addClass("hasNotFirstStep");
+    }
+    else {
+      if($("#"+x2.toString()+y2).hasClass("hasSecondStep"))
       {
-        curCommand[i].id=newId;
-        i=100;
+        $("#"+x2.toString()+y2).removeClass("hasSecondStep");
       }
+    }
   }
 
   window.moveFigureFunc = function(x1, y1, x2, y2)
   {
-    //alert('cell'+x2.toString()+y2);
-    /*var newLog = document.createElement('p');
-    newLog.innerHTML = document.getElementById('cell'+x1.toString()+y1).childNodes[0].id;
-    document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);*/
-
     document.getElementById('cell'+x2.toString()+y2).appendChild(document.getElementById('cell'+x1.toString()+y1).childNodes[1]);
-
-    //document.getElementById(x1.toString()+y1+'cell').removeChild(document.getElementById(x1.toString()+y1+'cell').childNodes[0]);
   }
-/*
-  function moveFigure(x1,y1,x2,y2)
+
+  window.checkENPassantFunc = function(x1, y1, x2, y2)
   {
-    var curFigure = getElementById('cell' + x1 + y1).childNodes[0];
-    getElementById('cell' + x2 + y2).appendChild(curFigure);
-  }*/
+    debugger;
+    if (curPlayer==0 &&
+      ((y2==(y1+1) && $("#" + x1.toString()+(y1+1)).hasClass("hasSecondStep")) ||
+      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep")) &&
+      x2==(+x1+1) ))
+    {
+      if(y2===(y1+1))
+        delFigureById(x1.toString()+y2);
+      else
+        delFigureById(x1.toString()+y2);
+    }
+    if (curPlayer==1 &&
+      ((y2==(y1+1) && $("#" + x1.toString()+(y1+1)).hasClass("hasSecondStep")) ||
+      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep")) &&
+      x2==(+x1-1) ))
+    {
+      if(y2===(y1+1))
+        delFigureById(x1.toString()+y2);
+      else
+        delFigureById(x1.toString()+y2);
+    }
+  }
 
   window.letterToNum = function (letter)
   {
@@ -774,6 +788,17 @@ socket.on('game_find', function(data){
   }
 
 
+  function checkCellBeforePawn(id)
+    {
+      for (var i=0; i<16; i++)
+      {
+        if ( ( black[i] && curPlayer===0 && black[i].id===id) || ( white[i] && curPlayer===1 && white[i].id===id) )
+        return false;
+      }
+      return true;
+    }
+
+
 // ПОЛУЧЕНИЕ ВОЗМОЖНЫХ ХОДОВ
   function getPossibleCells(curPos,curNumber,curLetter,curFigure)
   {
@@ -786,12 +811,18 @@ socket.on('game_find', function(data){
       {
         if(curPlayer==0)
         {
-          possibleCells[0]=(+curNumber+1)+curLetter;
-          possibleCells[1]=(+curNumber+2)+curLetter;
+          if(checkCellBeforePawn((+curNumber+1)+curLetter))
+          {
+            possibleCells[0]=(+curNumber+1)+curLetter;
+            possibleCells[1]=(+curNumber+2)+curLetter;
+          }
         }
         else {
-          possibleCells[0]=(+curNumber-1)+curLetter;
-          possibleCells[1]=(+curNumber-2)+curLetter;
+          if(checkCellBeforePawn((+curNumber-1)+curLetter))
+          {
+            possibleCells[0]=(+curNumber-1)+curLetter;
+            possibleCells[1]=(+curNumber-2)+curLetter;
+          }
         }
       }
       if( $("#"+curPos).hasClass("hasNotFirstStep") )
