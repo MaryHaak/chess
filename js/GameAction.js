@@ -107,8 +107,9 @@ socket.on('game_find', function(data){
       //закрашиваем ячейки
       for (var i=0; i<curPossibleCells.length; i++)
         $(document.getElementById("cell"+curPossibleCells[i])).addClass("possiblecell");
-      for (var i=0; i<possibleCastlingRooks.length; i++)
-        $(document.getElementById("cell"+possibleCastlingRooks[i].id)).addClass("possibleCastling");
+      if(possibleCastlingRooks!=null)
+        for (var i=0; i<possibleCastlingRooks.length; i++)
+          $(document.getElementById("cell"+possibleCastlingRooks[i].id)).addClass("possibleCastling");
       if(curPossibleCells.length==0)
       {
         var newLog = document.createElement('p');
@@ -121,35 +122,55 @@ socket.on('game_find', function(data){
 
   function handleDropEvent(event,ui)
   {
+
     if((curPlayer===0 && curColor==="black") || (curPlayer===1 && curColor==="white")  || (myColor==="white" && curPlayer===1) || (myColor==="black" && curPlayer===0))
     {
       $(".figure").draggable( "option", "revert", true );
     }
     else {
       $(".figure").draggable( "option", "revert", false );
-    //debugger;
+
     var curCell = $(event.target).attr("id").substr(4,2);
 
     //отмена подсвечивания возможных ходов
     if (curPossibleCells!=null)
       for (var i=0; i<curPossibleCells.length; i++)
         $(document.getElementById("cell"+curPossibleCells[i])).removeClass("possiblecell");
-    for (var i=0; i<possibleCastlingRooks.length; i++)
-      $(document.getElementById("cell"+possibleCastlingRooks[i].id)).removeClass("possibleCastling");
+    if(possibleCastlingRooks!=null)
+      for (var i=0; i<possibleCastlingRooks.length; i++)
+        $(document.getElementById("cell"+possibleCastlingRooks[i].id)).removeClass("possibleCastling");
 
-    if ( (curPossibleCells!=null && checkCurCell(curCell)) || possibleCastlingRooks.length>0)
+    if ( (curPossibleCells!=null && checkCurCell(curCell)) || (possibleCastlingRooks!=null && possibleCastlingRooks.length>0))
     {
       $(".figure").draggable( "option", "revert", false );
 
       //сохраняем текущее положение фигуры
       //document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
-      if( possibleCastlingRooks.length>0 && (curCell===possibleCastlingRooks[0].id || curCell===possibleCastlingRooks[1].id) )
+
+      if( possibleCastlingRooks!=null && possibleCastlingRooks.length>0 && (curCell===possibleCastlingRooks[0].id || curCell===possibleCastlingRooks[1].id) )
       {
+        $(ui.helper).css("left","");
+        $(ui.helper).css("top","");
         castlingFunc(curCell);
         possibleCastlingRooks=null;
         //пишем лог
+        var newLog = document.createElement('p');
         newLog.innerHTML = curPos + " - " + curCell + " CASTLING";
         document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+        socket.emit('turn_castling', {from:{x:numToLetter(curCell[1]), y:curCell[0]}});
+
+        curPlayer=1-curPlayer;
+
+        if(curPlayer===0)
+          document.getElementById('turnmessage').innerHTML="White";
+        else
+          document.getElementById('turnmessage').innerHTML="Black";
+
+        //проверка шаха
+        checkShah();
+        checkMat();
+
+        return;
       }
       else
       {
@@ -177,17 +198,26 @@ socket.on('game_find', function(data){
           }
         }
 
-        //сохраняем текущее положение фигуры
-        moveFigureFunc(ui.draggable.prop("id")[0], ui.draggable.prop("id")[1], curCell[0], curCell[1]);
-        $(ui.helper).css("left","");
-			  $(ui.helper).css("top","");
-        document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
-        //$("#"+curCell).removeClass("hasFirstStep");
-        //$("#"+curCell).addClass("hasNotFirstStep");
-
-        //changeBoardFunc(curPos[0], curPos[1], curCell[0], curCell[1]);
-        console.log(numToLetter(curPos[1]) + curPos[0] + " " + numToLetter(curCell[1]) + curCell[0]);
-        socket.emit('turn_move', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}});
+        //превращение пешки
+        if ( curFigure==="pawn" && ( ( curPlayer===0 && curCell[0]==8 ) || ( curPlayer===1 && curCell[0]==1 ) ) )
+        {
+          popUp(curCell);
+          moveFigureFunc(ui.draggable.prop("id")[0], ui.draggable.prop("id")[1], curCell[0], curCell[1]);
+          $(ui.helper).css("left","");
+  			  $(ui.helper).css("top","");
+          document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
+          console.log(numToLetter(curPos[1]) + curPos[0] + " " + numToLetter(curCell[1]) + curCell[0]);
+          //emit внутри функции popUp
+        }
+        else {
+          //сохраняем текущее положение фигуры
+          moveFigureFunc(ui.draggable.prop("id")[0], ui.draggable.prop("id")[1], curCell[0], curCell[1]);
+          $(ui.helper).css("left","");
+  			  $(ui.helper).css("top","");
+          document.getElementById(ui.draggable.prop("id")).setAttribute("id",curCell);
+          console.log(numToLetter(curPos[1]) + curPos[0] + " " + numToLetter(curCell[1]) + curCell[0]);
+          socket.emit('turn_move', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}});
+        }
 
         if($("#"+curCell).hasClass("hasFirstStep"))
         {
@@ -200,12 +230,6 @@ socket.on('game_find', function(data){
           {
             $("#"+curCell).removeClass("hasSecondStep");
           }
-        }
-
-        //превращение пешки
-        if ( curFigure==="pawn" && ( ( curPlayer===0 && curCell[0]==8 ) || ( curPlayer===1 && curCell[0]==1 ) ) )
-        {
-          popUp(curCell);
         }
       }
 
@@ -254,11 +278,10 @@ socket.on('game_find', function(data){
 
   window.checkENPassantFunc = function(x1, y1, x2, y2)
   {
-    debugger;
     if (curPlayer==0 &&
       ((y2==(y1+1) && $("#" + x1.toString()+(y1+1)).hasClass("hasSecondStep")) ||
-      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep")) &&
-      x2==(+x1+1) ))
+      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep"))) &&
+      x2==6 )
     {
       if(y2===(y1+1))
         delFigureById(x1.toString()+y2);
@@ -267,8 +290,8 @@ socket.on('game_find', function(data){
     }
     if (curPlayer==1 &&
       ((y2==(y1+1) && $("#" + x1.toString()+(y1+1)).hasClass("hasSecondStep")) ||
-      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep")) &&
-      x2==(+x1-1) ))
+      ((y2==(y1-1)) && $("#" + x1.toString()+(y1-1)).hasClass("hasSecondStep"))) &&
+      x2==3 )
     {
       if(y2===(y1+1))
         delFigureById(x1.toString()+y2);
@@ -295,6 +318,16 @@ socket.on('game_find', function(data){
       return 7;
     if(letter==="h" || letter==="H")
       return 8;
+  }
+
+  window.changePawn = function(curCell, newPiece)
+  {
+    if(newPiece=="bishop")
+      newPiece="eleph";
+    if(newPiece=="knight")
+      newPiece="horse";
+    $("#"+curCell).addClass(newPiece);
+    $("#"+curCell).removeClass("pawn");
   }
 
   window.numToLetter = function (num)
@@ -357,24 +390,24 @@ socket.on('game_find', function(data){
     });
 
     $('#magicqueen').click(function() {
-        debugger;
         $("#"+curCell).removeClass("pawn");
         $("#"+curCell).addClass("queen");
+        socket.emit('turn_promotion', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}, newPiece: "queen"});
     });
     $('#magiceleph').click(function() {
-        debugger;
         $("#"+curCell).removeClass("pawn");
         $("#"+curCell).addClass("eleph");
+        socket.emit('turn_promotion', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}, newPiece: "bishop"});
     });
     $('#magichorse').click(function() {
-        debugger;
         $("#"+curCell).removeClass("pawn");
         $("#"+curCell).addClass("horse");
+        socket.emit('turn_promotion', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}, newPiece: "knight"});
     });
     $('#magicrook').click(function() {
-        debugger;
         $("#"+curCell).removeClass("pawn");
         $("#"+curCell).addClass("rook");
+        socket.emit('turn_promotion', {from:{x:numToLetter(curPos[1]), y:curPos[0]}, to:{x:numToLetter(curCell[1]), y:curCell[0]}, newPiece: "rook"});
     });
   }
 
@@ -415,17 +448,16 @@ socket.on('game_find', function(data){
 
   function castlingFunc(rookId)
   {
-    debugger;
     if(rookId[1]==8)
     {
-      document.getElementById(rookId).style.right=150+'px';
-      document.getElementById(curPos).style.left=parseInt(document.getElementById(curPos).style.left)-75+'px';
+      moveFigureFunc(rookId[0], rookId[1], curPos[0], (+curPos[1]+1));
+      moveFigureFunc(curPos[0], curPos[1], curPos[0], (+curPos[1]+2));
       document.getElementById(rookId).setAttribute("id", curPos[0]+(+curPos[1]+1));
       document.getElementById(curPos).setAttribute("id", curPos[0]+(+curPos[1]+2));
     }
     else {
-      document.getElementById(rookId).style.right=-225+'px';
-      document.getElementById(curPos).style.left=parseInt(document.getElementById(curPos).style.left)+150+'px';
+      moveFigureFunc(rookId[0], rookId[1], curPos[0], (+curPos[1]-1));
+      moveFigureFunc(curPos[0], curPos[1], curPos[0], (+curPos[1]-2));
       document.getElementById(rookId).setAttribute("id", curPos[0]+(+curPos[1]-1));
       document.getElementById(curPos).setAttribute("id", curPos[0]+(+curPos[1]-2));
     }
@@ -518,7 +550,7 @@ socket.on('game_find', function(data){
 
   window.checkEnemyCellFreedom = function(curCell)
   {
-    //debugger;
+
     for (var i=0; i<16; i++)
       if( ( black[i] && curPlayer==0 && black[i].id==curCell) || ( white[i] && curPlayer==1 && white[i].id==curCell) )
         return false;
@@ -573,7 +605,7 @@ socket.on('game_find', function(data){
 
   function checkShah()
   {
-    //debugger;
+
     //суть проверки:
     //проходим по possibleCells для каждой фигуры противника
     //если есть возможность съесть короля на следующем ходе, значит - шах
@@ -612,9 +644,8 @@ socket.on('game_find', function(data){
   }
 
 
-  function checkMat()
+  window.checkMat = function()
   {
-    //debugger;
     //1.проходим по всем фигурам следующего игрока
     //2.берем possibleCells(другое имя) для каждой
     //3.проверяем каждую possibleCells каждой фигуры в checkConcreteCellShah и удаляем ходы, ведущие к шаху
@@ -644,7 +675,11 @@ socket.on('game_find', function(data){
       if (checkingMatPossibleCells.length>0)
       {
         isMat=false;
-        return;
+        //var newLog = document.createElement('p');
+        //newLog.innerHTML="----------NO MAT :)----------";
+        //document.getElementById('logbox').appendChild(newLog);
+        //document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+        return false;
       }
     }
     if(isMat)
@@ -653,13 +688,14 @@ socket.on('game_find', function(data){
       newLog.innerHTML="----------MAT----------";
       //document.getElementById('logbox').appendChild(newLog);
       document.getElementById("logbox").insertBefore(newLog, document.getElementById("logbox").childNodes[0]);
+      return true;
     }
   }
 
 
   function checkConcreteCellShah(oldId, possibleId)
   {
-    //debugger;
+
     //суть проверки:
     //передаем потенциальный ход
     //записываем его в black/white.id
@@ -755,11 +791,11 @@ socket.on('game_find', function(data){
     //проходим по всем пешкам противника
     //если противник на 4 ряду для черного и 5 для белого + только что сделал ход
     //можно походить по горизонтали и скушать противника при этом
-    if(curPlayer===0 && curPos[0]==5)
+    if(curPlayer===0 && curPos!=null && curPos[0]==5)
     {
       checkEnemyPosForENPassant(5, possibleCells);
     }
-    if(curPlayer===1 && curPos[0]==4)
+    if(curPlayer===1 && curPos!=null && curPos[0]==4)
     {
       checkEnemyPosForENPassant(4, possibleCells);
     }

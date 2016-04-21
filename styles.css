@@ -137,6 +137,17 @@ html, body, div{
 		padding: 30px;
 }
 
+#smallPopup {
+    position: absolute;
+    border-radius: 5px;
+    background: #fff;
+    display: none;
+    box-shadow: 1px 1px 5px rgba(0,0,0,0.2);
+    z-index: 9999999;
+		background: #BDBDBD;
+		padding: 30px;
+}
+
 .popup-box div {
 	height: 75px;
 	width: 75px;
@@ -227,7 +238,7 @@ html, body, div{
     z-index: 999999;
 }
 
-#endblackout #endbutton {	
+#endblackout #endbutton {
 	z-index: 10000000;
 }
 

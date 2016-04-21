@@ -14,30 +14,31 @@ io.sockets.on('connection', function (socket) {
   socket.ID = ID;
   playersNumber++;
 
+  socket.on('turn_promotion', function(data){
+    console.log('promotion to ' + data.newPiece);
+    socket.broadcast.to(socket.room).emit('player_promotion', {playerColor: socket.color, from:{x:data.from.x, y:data.from.y}, to:{x:data.to.x, y:data.to.y}, newPiece: data.newPiece});
+  });
+
+  socket.on('turn_mate', function(){
+    console.log('mat event from ' + socket.color);
+    socket.broadcast.to(socket.room).emit('player_mate');
+  });
+
+  socket.on('turn_castling', function (data){
+    console.log(socket.color + ' player: castling');
+    socket.broadcast.to(socket.room).emit('player_castling', {playerColor: socket.color, from:{x:data.from.x, y:data.from.y}});
+  });
+
   socket.on('turn_move', function (data) {
-    //socket.emit('game_end', {msg: 'leave', winnerColor: null});
-    console.log("yay");
     console.log("socket room: " + socket.room);
-    //io.sockets.in(socket.room).emit('player_move', {playerColor: socket.color, from:{x:data.from.x, y:data.from.y}, to:{x:data.to.x, y:data.to.y}});
     socket.broadcast.to(socket.room).emit('player_move', {playerColor: socket.color, from:{x:data.from.x, y:data.from.y}, to:{x:data.to.x, y:data.to.y}});
     console.log(data.from.x + data.from.y + " -- " + data.to.x + data.to.y);
-    //io.sockets.to(rooms[socket.room]).emit('player_move', {playerColor: socket.color, from:{x:data.from.x, y:data.from.y}, to:{x:data.to.x, y:data.to.y}});
   });
 
   socket.on('game_find', function(){
     queue.push(socket);
     if ( queue.length > 1 )
     {
-      /*var socket1 = queue[0];
-      var socket2 = queue[1];
-      queue.splice(0,2);
-      socket1.room = rooms.length-1;
-      socket2.room = rooms.length-1;
-      rooms.push(rooms.length);
-      socket1.join(rooms[rooms.length-1]);
-      socket2.join(rooms[rooms.length-1]);
-      console.log("created room: " + rooms[rooms.length-1] + " rooms number: " + (rooms.length-1));
-      io.sockets.to(rooms[rooms.length-1]).emit('game_found', {hasRoom: true});*/
       rooms.push(rooms.length);
       rooms[rooms.length-1].white = 'white';
       rooms[rooms.length-1].black = 'black';
@@ -80,5 +81,9 @@ io.sockets.on('connection', function (socket) {
   {
     queue.splice(0, 1);
     console.log(ID + ' is away from queue');
+  });
+
+  socket.on('turnValidation_mate', function(){
+    io.sockets.to(socket.room).emit('game_end', {msg:"mate", winnerColor:socket.color});
   });
 });
